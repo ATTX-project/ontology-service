@@ -1,0 +1,11 @@
+pbr
+pytz
+jsonschema
+elasticsearch
+falcon
+requests
+requests-file
+gunicorn
+click
+AMQPStorm
+Owlready2
