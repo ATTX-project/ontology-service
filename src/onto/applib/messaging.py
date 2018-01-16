@@ -5,8 +5,8 @@ import amqpstorm
 from amqpstorm import Message
 from amqpstorm import Connection
 from onto.utils.logs import app_logger
-from onto.applib.construct_message import replace_message, add_message
-from onto.applib.construct_message import response_message
+# from onto.applib.construct_message import replace_message, add_message
+# from onto.applib.construct_message import response_message
 
 
 class ScalableRpcServer(object):
@@ -186,13 +186,14 @@ class Consumer(object):
     def _handle_message(self, message):
         """Handle ontology messages."""
         message_data = json.loads(message.body)
-        action = message_data["payload"]["ontologyServiceInput"]["task"]
-        if action == "replace":
-            return str(replace_message(message_data))
-        elif action == "add":
-            return str(add_message(message_data))
-        else:
-            raise KeyError("Missing action or task not specified.")
+        return message_data
+        # action = message_data["payload"]["ontologyServiceInput"]["task"]
+        # if action == "replace":
+        #     return str(replace_message(message_data))
+        # elif action == "add":
+        #     return str(add_message(message_data))
+        # else:
+        #     raise KeyError("Missing action or task not specified.")
 
     def __call__(self, message):
         """Process the RPC Payload.
@@ -209,7 +210,8 @@ class Consumer(object):
             }
             error_message = "Error Type: {0}, with message: {1}".format(e.__class__.__name__, e.message)
             message_data = json.loads(message.body)
-            processed_message = response_message(message_data["provenance"], status="error", status_messsage=error_message)
+            processed_message = message_data + error_message
+            # processed_message = response_message(message_data["provenance"], status="error", status_messsage=error_message)
             response = Message.create(message.channel, str(json.dumps(processed_message, indent=4, separators=(',', ': '))), properties)
             response.publish(message.reply_to)
             message.reject(requeue=False)

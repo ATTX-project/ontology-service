@@ -1,7 +1,6 @@
 import json
 import falcon
 from onto.utils.logs import app_logger
-from onto.applib.elastic_index import ElasticIndex
 from amqpstorm.management import ManagementApi
 from onto.utils.broker import broker
 # TO DO More detailed response from the health endpoint with statistics
@@ -10,9 +9,7 @@ from onto.utils.broker import broker
 
 def healthcheck_response(api_status):
     """Content and format health status response."""
-    elastic = ElasticIndex()
-    health_status = dict([('indexService', api_status)])
-    health_status['elasticsearch'] = ''.join(elastic._healthcheck().get("status"))
+    health_status = dict([('ontologyService', api_status)])
     API = ManagementApi('http://{0}:15672'.format(broker['host']), broker['user'], broker['pass'])
     try:
         result = API.aliveness_test('/')

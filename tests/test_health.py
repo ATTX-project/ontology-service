@@ -30,7 +30,7 @@ class TestIndex(appHealthTest):
     @httpretty.activate
     def test_health_ok(self):
         """Test GET health is ok."""
-        httpretty.register_uri(httpretty.GET, "http://localhost:4304/health", status=200)
+        httpretty.register_uri(httpretty.GET, "http://localhost:4305/health", status=200)
         result = self.simulate_get('/health')
         assert(result.status == falcon.HTTP_200)
         httpretty.disable()
@@ -42,10 +42,10 @@ class TestIndex(appHealthTest):
         httpretty.register_uri(httpretty.GET, "http://user:password@localhost:15672/api/aliveness-test/%2F", body='{"status": "ok"}', status=200)
         # httpretty.register_uri(httpretty.HEAD, "http://localhost:9210", status=200)
         # httpretty.register_uri(httpretty.GET, "http://localhost:9210/_cluster/health", body='{"status": "green"}', status=200)
-        httpretty.register_uri(httpretty.GET, "http://localhost:4304/health", status=200)
+        httpretty.register_uri(httpretty.GET, "http://localhost:4305/health", status=200)
         response = healthcheck_response("Running")
         result = self.simulate_get('/health')
-        json_response = {"indexService": "Running", "messageBroker": "Running", "elasticsearch": "Not Running"}
+        json_response = {"ontologyService": "Running", "messageBroker": "Running"}
         assert(json_response == json.loads(response))
         assert(result.content == response)
         httpretty.disable()
