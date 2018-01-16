@@ -161,7 +161,7 @@ setup(
     description='Falcon PyGradle example',
     entry_points='''
         [console_scripts]
-        indexapi=esindex.indexservice:main
+        ontoapi=onto.ontoservice:main
     ''',
     author='ATTX Project',
     author_email='stefan.negru@helsinki.fi',

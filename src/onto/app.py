@@ -8,16 +8,16 @@ api_version = "0.2"  # TO DO: Figure out a better way to do versioning
 
 def init_api():
     """Create the API endpoint."""
-    indexservice = falcon.API()
+    ontoservice = falcon.API()
 
-    indexservice.add_route('/health', HealthCheck())
+    ontoservice.add_route('/health', HealthCheck())
 
-    indexservice.add_route('/%s/alias/list' % (api_version), AliasesList())
+    ontoservice.add_route('/%s/alias/list' % (api_version), AliasesList())
 
-    indexservice.add_route('/%s/data/index' % (api_version), IndexClass())
+    ontoservice.add_route('/%s/data/index' % (api_version), IndexClass())
 
     app_logger.info('IndexService REST API is running.')
-    return indexservice
+    return ontoservice
 
 
 # if __name__ == '__main__':

@@ -9,9 +9,9 @@ from requests_file import FileAdapter
 from onto.applib.elastic_index import ElasticIndex
 from functools import wraps
 
-artifact_id = "IndexingService"  # Define the IndexingService agent
+artifact_id = "OntologyService"  # Define the OntologyService agent
 agent_role = "index"  # Define Agent type
-output_key = "indexingServiceOutput"
+output_key = "ontologyServiceOutput"
 
 
 def index_data(func):
@@ -19,12 +19,12 @@ def index_data(func):
     @wraps(func)
     def wrapper(message_data, *args, **kwargs):
         """Wrap it nicely."""
-        aliases = message_data["payload"]["indexingServiceInput"]["targetAlias"]
+        aliases = message_data["payload"]["ontologyServiceInput"]["targetAlias"]
         alias_list = [str(r) for r in aliases]
         # If there are multiple aliases in the message we need the first one for reference.
         # The reference alias will act as a unique identified for the index to be replaced.
         reference_alias = next(iter(alias_list or []), None)
-        source_data = message_data["payload"]["indexingServiceInput"]["sourceData"]
+        source_data = message_data["payload"]["ontologyServiceInput"]["sourceData"]
         elastic = ElasticIndex()
         # We will be using only one index for all data sources.
         replace_index = elastic._index_create(reference_alias)
@@ -147,7 +147,7 @@ def prov_message(message_data, status, start_time, end_time, replace_index):
     message["provenance"]["output"] = []
     message["payload"] = {}
 
-    alias_list = [str(r) for r in message_data["payload"]["indexingServiceInput"]["targetAlias"]]
+    alias_list = [str(r) for r in message_data["payload"]["ontologyServiceInput"]["targetAlias"]]
     for alias in alias_list:
         key = "outputAlias_{0}".format(alias_list.index(alias))
         output_data = {
@@ -156,7 +156,7 @@ def prov_message(message_data, status, start_time, end_time, replace_index):
         }
         message["provenance"]["output"].append(output_data)
         message["payload"][key] = alias
-    source_data = message_data["payload"]["indexingServiceInput"]["sourceData"]
+    source_data = message_data["payload"]["ontologyServiceInput"]["sourceData"]
     for elem in source_data:
         key = "inputData_{0}".format(source_data.index(elem))
         input_data = {

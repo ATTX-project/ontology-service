@@ -26,7 +26,7 @@ def server(host, port, log, workers):
         'daemon': 'True',
         'errorlog': log
     }
-    INDEXService(init_api(), options).run()
+    ONTOService(init_api(), options).run()
 
 
 @cli.command('rpc')
@@ -36,14 +36,14 @@ def rpc():
     RPC_SERVER.start_server()
 
 
-class INDEXService(gunicorn.app.base.BaseApplication):
+class ONTOService(gunicorn.app.base.BaseApplication):
     """Create Standalone Application Indexing Service."""
 
     def __init__(self, app, options=None):
         """The init."""
         self.options = options or {}
         self.application = app
-        super(INDEXService, self).__init__()
+        super(ONTOService, self).__init__()
 
     def load_config(self):
         """Load configuration."""

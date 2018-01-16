@@ -184,9 +184,9 @@ class Consumer(object):
             self.channel.close()
 
     def _handle_message(self, message):
-        """Handle ES index messages."""
+        """Handle ontology messages."""
         message_data = json.loads(message.body)
-        action = message_data["payload"]["indexingServiceInput"]["task"]
+        action = message_data["payload"]["ontologyServiceInput"]["task"]
         if action == "replace":
             return str(replace_message(message_data))
         elif action == "add":
