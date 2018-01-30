@@ -7,4 +7,3 @@ requests-file==1.4.2
 gunicorn==19.7.1
 click==6.7
 AMQPStorm==2.2.2
-Owlready2==0.5

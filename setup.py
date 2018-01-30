@@ -158,7 +158,7 @@ setup(
     include_package_data=True,
     name='falcon-pygradle',
     # version='1.0.0',  # This is not read instead Gradle build version is used
-    description='Falcon PyGradle example',
+    description='Ontology Service',
     entry_points='''
         [console_scripts]
         ontoapi=onto.ontoservice:main
@@ -166,7 +166,7 @@ setup(
     author='ATTX Project',
     author_email='stefan.negru@helsinki.fi',
     url='https://www.helsinki.fi/en/projects/attx-2016',
-    long_description="PyGradle example for creating a Falcon REST API.",
+    long_description="Ontology Service API.",
     license='Apache Software License',
     platforms='Linux',
     classifiers=[
