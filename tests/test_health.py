@@ -8,7 +8,7 @@ from onto.api.healthcheck import healthcheck_response
 
 
 class appHealthTest(testing.TestCase):
-    """Testing Indexing Service Health."""
+    """Testing Ontology Service Health."""
 
     def setUp(self):
         """Setting the app up."""

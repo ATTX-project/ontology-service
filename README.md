@@ -18,13 +18,11 @@ The version number is specified in `src/onto/app.py` under `version` variable.
 
 The Indexing service manages interaction with Elasticsearch 5.+ and retrieving statistics about it (e.g. list of existing aliases) but it main function is to index data in Elasticsearch.
 
-Full information on how to run and work with the Indexing Service available at: https://attx-project.github.io/Service-Indexing.html
+Full information on how to run and work with the Indexing Service available at: https://attx-project.github.io/Service-Ontology.html
 
 ## API Endpoints
 
 The Indexing REST API has the following endpoints:
-* `alias` - retrieves information about existing aliases;
-* `data` - index provided data into Elasticsearch;
 * `health` - checks if the application is running.
 
 ## Develop

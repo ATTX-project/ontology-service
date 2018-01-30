@@ -111,7 +111,7 @@ uploadArchives {
             pom.project {
                 version = "${artifactVersion}"
                 groupId = "${serviceID}"
-                description "Indexing Service."
+                description "Ontology Service."
             }
         }
     }
