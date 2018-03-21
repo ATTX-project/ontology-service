@@ -1,6 +1,6 @@
-## SHACL Validation Service
+## Ontology Validation Service
 
-The service makes use of The service makes use of https://github.com/TopQuadrant/shacl/
+The service makes use of Jena API for working with ontolgies.
 
 In order to start the service
 ```
