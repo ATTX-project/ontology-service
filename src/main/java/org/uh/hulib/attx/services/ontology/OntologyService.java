@@ -27,7 +27,15 @@ public class OntologyService {
 
             SQLiteConnection data = SQLiteConnection.main();
             String result = null;
+            if (jsonNode.has("ontologyGraph")) {
+                // Load the main data model
+                String schemaGraph = jsonNode.get("schemaGraph").asText();
+                String dataGraph = jsonNode.get("dataGraph").asText();
 
+                result = OntologyUtils.OntologyInfer(dataGraph, schemaGraph);
+            } else {
+
+            }
             Random rand = new Random();
 
             int n = rand.nextInt(500000) + 1;
@@ -39,7 +47,32 @@ public class OntologyService {
         });
 
 
+        post(String.format("/%s/validate", apiVersion), "application/json", (request, response) -> {
 
+            String content = request.body();
+            ObjectMapper objectMapper = new ObjectMapper();
+            JsonNode jsonNode = objectMapper.readTree(content);
+
+            SQLiteConnection data = SQLiteConnection.main();
+            String result = null;
+            if (jsonNode.has("ontologyGraph")) {
+                // Load the main data model
+                String schemaGraph = jsonNode.get("schemaGraph").asText();
+                String dataGraph = jsonNode.get("dataGraph").asText();
+
+                result = OntologyUtils.ValidityReport(dataGraph, schemaGraph);
+            } else {
+
+            }
+            Random rand = new Random();
+
+            int n = rand.nextInt(500000) + 1;
+            data.insert(n, result);
+
+            response.status(200); // 200 Done
+            response.type("text/turtle");
+            return result;
+        });
 
     }
 
