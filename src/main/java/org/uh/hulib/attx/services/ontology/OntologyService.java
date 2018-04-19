@@ -13,7 +13,7 @@ public class OntologyService {
         int timeOutMillis = 30000;
         String apiVersion = "0.2";
 
-        port(4306);
+        port(4305);
         threadPool(maxThreads, minThreads, timeOutMillis);
 
         get("/health", (request, response) -> "Hello World");
@@ -27,14 +27,14 @@ public class OntologyService {
 
             SQLiteConnection data = SQLiteConnection.main();
             String result = null;
-            if (jsonNode.has("ontologyGraph")) {
+            if (jsonNode.has("schemaGraph") && jsonNode.has("dataGraph")) {
                 // Load the main data model
                 String schemaGraph = jsonNode.get("schemaGraph").asText();
                 String dataGraph = jsonNode.get("dataGraph").asText();
 
                 result = OntologyUtils.OntologyInfer(dataGraph, schemaGraph);
             } else {
-
+                // FOR NOW DO NOTHING
             }
             Random rand = new Random();
 
@@ -55,14 +55,14 @@ public class OntologyService {
 
             SQLiteConnection data = SQLiteConnection.main();
             String result = null;
-            if (jsonNode.has("ontologyGraph")) {
+            if (jsonNode.has("schemaGraph") && jsonNode.has("dataGraph")) {
                 // Load the main data model
                 String schemaGraph = jsonNode.get("schemaGraph").asText();
                 String dataGraph = jsonNode.get("dataGraph").asText();
 
                 result = OntologyUtils.ValidityReport(dataGraph, schemaGraph);
             } else {
-
+                // FOR NOW DO NOTHING
             }
             Random rand = new Random();
 

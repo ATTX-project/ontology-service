@@ -62,7 +62,7 @@ uploadArchives {
             pom.project {
                 version = "${version}"
                 groupId = jar.group
-                description "Validation Service."
+                description "Ontology Service."
             }
         }
     }

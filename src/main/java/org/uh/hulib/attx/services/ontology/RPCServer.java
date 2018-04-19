@@ -1,5 +1,7 @@
 package org.uh.hulib.attx.services.ontology;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rabbitmq.client.ConnectionFactory;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.Channel;
@@ -39,10 +41,38 @@ public class RPCServer {
             }
     }
 
-    private static int fib(int n) {
-        if (n ==0) return 0;
-        if (n == 1) return 1;
-        return fib(n-1) + fib(n-2);
+    private static String infer(JsonNode payload) {
+
+        String result = null;
+        if (payload.has("sourceData")) {
+            // Load the main data model
+
+            String schemaGraph = payload.get("sourceData").get("schemaGraph").asText();
+            String dataGraph = payload.get("sourceData").get("dataGraph").asText();
+
+            result = OntologyUtils.OntologyInfer(dataGraph, schemaGraph);
+        } else {
+            // FOR NOW DO NOTHING
+        }
+
+        return result;
+    }
+
+    private static String report(JsonNode payload) {
+
+        String result = null;
+        if (payload.has("sourceData")) {
+            // Load the main data model
+
+            String schemaGraph = payload.get("sourceData").get("schemaGraph").asText();
+            String dataGraph = payload.get("sourceData").get("dataGraph").asText();
+
+            result = OntologyUtils.ValidityReport(dataGraph, schemaGraph);
+        } else {
+            // FOR NOW DO NOTHING
+        }
+
+        return result;
     }
 
     public void run() {
@@ -80,10 +110,28 @@ public class RPCServer {
 
                     try {
                         String message = new String(body,"UTF-8");
-                        int n = Integer.parseInt(message);
+                        System.out.println("Message received: " + message);
 
-                        System.out.println(" [.] fib(" + message + ")");
-                        response += fib(n);
+                        ObjectMapper objectMapper = new ObjectMapper();
+                        JsonNode jsonNode = objectMapper.readTree(message);
+
+
+                        if (jsonNode.has("payload") && jsonNode.has("provenance")) {
+                            JsonNode payload = jsonNode.get("payload").get("ontologyServiceInput");
+                            JsonNode provenance = jsonNode.get("provenance");
+
+                            String activityType = payload.get("activity").asText();
+
+                            if( activityType.equals("infer")) {
+                                System.out.println("Inference action received.");
+                                response = infer(payload);
+                            } else if (activityType.equals("report")) {
+                                System.out.println("Validity report action received.");
+                                response = report(payload);
+                            } else {
+                                // Send ERROR
+                            }
+                        }
                     }
                     catch (RuntimeException e){
                         System.out.println(" [.] " + e.toString());

@@ -5,8 +5,13 @@ import org.apache.jena.reasoner.Reasoner;
 import org.apache.jena.reasoner.ReasonerRegistry;
 import org.apache.jena.reasoner.ValidityReport;
 import org.apache.jena.util.FileManager;
+import org.apache.jena.util.FileUtils;
 
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.net.MalformedURLException;
+import java.net.URISyntaxException;
+import java.net.URL;
 import java.util.Iterator;
 
 
@@ -15,10 +20,22 @@ public class OntologyUtils {
         InfModel infmodel = null;
         Model result = null;
         try {
-            // "/home/stenegru/dev/ontology-service/src/main/resources/owlDemoSchema.ttl"
-            Model schema = FileManager.get().loadModel(schemaGraph);
-            // "/home/stenegru/dev/ontology-service/src/main/resources/owlDemoData.ttl"
-            Model data = FileManager.get().loadModel(dataGraph);
+            Model schema = ModelFactory.createDefaultModel();
+            Model data = ModelFactory.createDefaultModel();
+            // "/home/user/dev/ontology-service/src/main/resources/owlDemoSchema.ttl"
+            if(urlValidator(schemaGraph) == true) {
+               schema = FileManager.get().loadModel(schemaGraph);
+            } else {
+               schema.read(new ByteArrayInputStream(schemaGraph.getBytes()), "urn:attx", FileUtils.langTurtle);
+            }
+
+            // "/home/user/dev/ontology-service/src/main/resources/owlDemoData.ttl"
+            if(urlValidator(dataGraph) == true) {
+                data = FileManager.get().loadModel(dataGraph);
+            } else {
+                data.read(new ByteArrayInputStream(dataGraph.getBytes()), "urn:attx", FileUtils.langTurtle);
+            }
+
             Reasoner reasoner = ReasonerRegistry.getOWLReasoner();
             reasoner = reasoner.bindSchema(schema);
             infmodel = ModelFactory.createInfModel(reasoner, data);
@@ -39,10 +56,22 @@ public class OntologyUtils {
     public static String ValidityReport(String dataGraph, String schemaGraph){
         String result = "";
         try {
-            // "/home/stenegru/dev/ontology-service/src/main/resources/owlDemoSchema.ttl"
-            Model schema = FileManager.get().loadModel(schemaGraph);
-            // "/home/stenegru/dev/ontology-service/src/main/resources/owlDemoData.ttl"
-            Model data = FileManager.get().loadModel(dataGraph);
+            Model schema = ModelFactory.createDefaultModel();
+            Model data = ModelFactory.createDefaultModel();
+            // "/home/user/dev/ontology-service/src/main/resources/owlDemoSchema.ttl"
+            if(urlValidator(schemaGraph) == true) {
+                schema = FileManager.get().loadModel(schemaGraph);
+            } else {
+                schema.read(new ByteArrayInputStream(schemaGraph.getBytes()), "urn:attx", FileUtils.langTurtle);
+            }
+
+            // "/home/user/dev/ontology-service/src/main/resources/owlDemoData.ttl"
+            if(urlValidator(dataGraph) == true) {
+                data = FileManager.get().loadModel(dataGraph);
+            } else {
+                data.read(new ByteArrayInputStream(dataGraph.getBytes()),"urn:attx", FileUtils.langTurtle);
+            }
+
             Reasoner reasoner = ReasonerRegistry.getOWLReasoner();
             reasoner = reasoner.bindSchema(schema);
             InfModel infmodel = ModelFactory.createInfModel(reasoner, data);
@@ -73,5 +102,21 @@ public class OntologyUtils {
             result.add(stmt);
         }
         return result;
+    }
+
+    public static boolean urlValidator(String url)
+    {
+        /*validating url*/
+        try {
+            new URL(url).toURI();
+            return true;
+        }
+        catch (URISyntaxException exception) {
+            return false;
+        }
+
+        catch (MalformedURLException exception) {
+            return false;
+        }
     }
 }
