@@ -16,6 +16,7 @@ import java.util.concurrent.TimeoutException;
 public class RPCServer {
 
     private static final String RPC_QUEUE_NAME = "attx.ontology.inbox";
+    private static final String PROV_QUEUE_NAME = "provenance.inbox";
 
     private static String getPassword() {
             if(System.getenv("MPASS") != null) {
@@ -75,6 +76,44 @@ public class RPCServer {
         return result;
     }
 
+    private static String provenanceMessage(String activity, JsonNode provenance, String schemaInput, String dataInput, String dataOutput){
+
+        String response = "{\n" +
+                "    \"provenance\": {\n" +
+                "        \"context\": {\n" +
+                "          \"workflowID\": \"ingestionwf\",\n" +
+                "          \"activityID\": \"1\"\n" +
+                "        },\n" +
+                "        \"agent\": {\n" +
+                "          \"ID\": \"OntologyService\",\n" +
+                "          \"role\": \"Inference\"\n" +
+                "        },\n" +
+                "        \"activity\": {\n" +
+                "            \"title\": \"" + activity + "\",\n" +
+                "            \"type\": \"ServiceExecution\",\n" +
+                "            \"startTime\": \"2017-08-02T13:52:29+02:00\"\n" +
+                "        },\n" +
+                "        \"input\": [\n" +
+                "          {\n" +
+                "            \"key\": \"inputDataset\",\n" +
+                "            \"role\": \"Dataset\"\n" +
+                "          }\n" +
+                "        ],\n" +
+                "        \"output\": [\n" +
+                "          {\n" +
+                "            \"key\": \"outputDataset\",\n" +
+                "            \"role\": \"Dataset\"\n" +
+                "          }\n" +
+                "        ]\n" +
+                "    },\n" +
+                "    \"payload\": {\n" +
+                "        \"inputDataset\": \"http://dataset/1\",\n" +
+                "        \"outputDataset\": \"http://dataset/2\"\n" +
+                "    }\n" +
+                "}\n";
+        return response;
+    }
+
     public void run() {
 
         OntologyService webApi = new OntologyService();
@@ -91,8 +130,11 @@ public class RPCServer {
         try {
             connection      = factory.newConnection();
             final Channel channel = connection.createChannel();
+            final Channel channelProv = connection.createChannel();
 
             channel.queueDeclare(RPC_QUEUE_NAME, false, false, false, null);
+
+            channelProv.queueDeclare(PROV_QUEUE_NAME, false, false, false, null);
 
             channel.basicQos(1);
 
@@ -107,6 +149,7 @@ public class RPCServer {
                             .build();
 
                     String response = "";
+                    String provMessage = "";
 
                     try {
                         String message = new String(body,"UTF-8");
@@ -130,10 +173,30 @@ public class RPCServer {
                                 response = report(payload);
                             } else {
                                 // Send ERROR
+
                             }
                         }
                     }
                     catch (RuntimeException e){
+                        String message = new String(body,"UTF-8");
+                        ObjectMapper objectMapper = new ObjectMapper();
+                        JsonNode jsonNode = objectMapper.readTree(message);
+
+                        JsonNode context = jsonNode.get("provenance").get("context");
+                        response = "{\n"
+                                + "	\"provenance\": {\n"
+                                + "		\"context\": {\n"
+                                + "			\"workflowID\": \"" + context.get("workflowID").asText() + "\",\n"
+                                + "			\"activityID\": \"" + context.get("activityID").asText()+ "\",\n"
+                                + "			\"stepID\": \"" + context.get("stepID").asText()+ "\"\n"
+                                + "		}\n"
+                                + "	},"
+                                + "    \"payload\": {\n"
+                                + "        \"status\": \"error\",\n"
+                                + "        \"statusMessage\": \"" + e.toString() + "\"\n"
+                                + "   }\n"
+                                + "}";
+
                         System.out.println(" [.] " + e.toString());
                     }
                     finally {
@@ -143,10 +206,13 @@ public class RPCServer {
                         synchronized(this) {
                             this.notify();
                         }
+
+                        channelProv.basicPublish( "", PROV_QUEUE_NAME, null, provMessage.getBytes());
+
                     }
                 }
             };
-
+            // channelProv.close();
             channel.basicConsume(RPC_QUEUE_NAME, false, consumer);
             // Wait and be prepared to consume the message from RPC client.
             while (true) {
