@@ -38,6 +38,8 @@ jar {
 sourceCompatibility = 1.8
 
 repositories {
+    maven { url "$artifactRepoURL/repository/attx-releases"}
+    maven { url "$artifactRepoURL/repository/internal"}
     mavenCentral()
 }
 
@@ -49,7 +51,7 @@ dependencies {
     compile 'com.fasterxml.jackson.core:jackson-core:2.9.4'
     compile 'com.fasterxml.jackson.core:jackson-databind:2.9.4'
     compile 'org.xerial:sqlite-jdbc:3.21.0'
-    //compile 'org.uh.hulib.attx.wc.uv:uv-common:1.9-SNAPSHOT'
+    compile 'org.uh.hulib.attx.wc.uv:uv-common:1.10-SNAPSHOT'
     testCompile 'junit:junit:4.+'
     testCompile "org.mockito:mockito-core:2.+"
 }
@@ -69,22 +71,22 @@ uploadArchives {
     }
 }
 
-// publishing {
-//     repositories {
-//         maven {
-//             url "${artifactRepoURL}/repository/attx-releases"
-//             credentials {
-//                 username "${artifactRepoUser}"
-//                 password "${artifactRepoPassword}"
-//             }
-//         }
-//     }
-//     publications {
-//         mavenJava(MavenPublication) {
-//             groupId jar.group
-//             artifactId jar.baseName
-//             version jar.version
-//             from components.java
-//         }
-//     }
-// }
+publishing {
+     repositories {
+         maven {
+             url "${artifactRepoURL}/repository/attx-releases"
+             credentials {
+                 username "${artifactRepoUser}"
+                 password "${artifactRepoPassword}"
+             }
+         }
+     }
+     publications {
+         mavenJava(MavenPublication) {
+             groupId jar.group
+             artifactId jar.baseName
+             version jar.version
+             from components.java
+         }
+     }
+}

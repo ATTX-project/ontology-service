@@ -9,14 +9,34 @@ import com.rabbitmq.client.Consumer;
 import com.rabbitmq.client.DefaultConsumer;
 import com.rabbitmq.client.AMQP;
 import com.rabbitmq.client.Envelope;
+import java.io.File;
 
 import java.io.IOException;
+import java.time.OffsetDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.TimeoutException;
+import javax.sound.sampled.SourceDataLine;
+import org.apache.commons.io.FileUtils;
+import org.uh.hulib.attx.wc.uv.common.pojos.OntologyServiceOutput;
+import org.uh.hulib.attx.wc.uv.common.pojos.OntologyServiceResponseMessage;
+import org.uh.hulib.attx.wc.uv.common.pojos.ProvenanceMessage;
+import org.uh.hulib.attx.wc.uv.common.pojos.Source;
+import org.uh.hulib.attx.wc.uv.common.pojos.prov.Activity;
+import org.uh.hulib.attx.wc.uv.common.pojos.prov.Agent;
+import org.uh.hulib.attx.wc.uv.common.pojos.prov.Context;
+import org.uh.hulib.attx.wc.uv.common.pojos.prov.DataProperty;
+import org.uh.hulib.attx.wc.uv.common.pojos.prov.Provenance;
 
 public class RPCServer {
 
     private static final String RPC_QUEUE_NAME = "attx.ontology.inbox";
     private static final String PROV_QUEUE_NAME = "provenance.inbox";
+    private static ObjectMapper mapper = new ObjectMapper();
 
     private static String getPassword() {
             if(System.getenv("MPASS") != null) {
@@ -76,43 +96,58 @@ public class RPCServer {
         return result;
     }
 
-    private static String provenanceMessage(String activity, JsonNode provenance, String schemaInput, String dataInput, String dataOutput){
-
-        String response = "{\n" +
-                "    \"provenance\": {\n" +
-                "        \"context\": {\n" +
-                "          \"workflowID\": \"ingestionwf\",\n" +
-                "          \"activityID\": \"1\"\n" +
-                "        },\n" +
-                "        \"agent\": {\n" +
-                "          \"ID\": \"OntologyService\",\n" +
-                "          \"role\": \"Inference\"\n" +
-                "        },\n" +
-                "        \"activity\": {\n" +
-                "            \"title\": \"" + activity + "\",\n" +
-                "            \"type\": \"ServiceExecution\",\n" +
-                "            \"startTime\": \"2017-08-02T13:52:29+02:00\"\n" +
-                "        },\n" +
-                "        \"input\": [\n" +
-                "          {\n" +
-                "            \"key\": \"inputDataset\",\n" +
-                "            \"role\": \"Dataset\"\n" +
-                "          }\n" +
-                "        ],\n" +
-                "        \"output\": [\n" +
-                "          {\n" +
-                "            \"key\": \"outputDataset\",\n" +
-                "            \"role\": \"Dataset\"\n" +
-                "          }\n" +
-                "        ]\n" +
-                "    },\n" +
-                "    \"payload\": {\n" +
-                "        \"inputDataset\": \"http://dataset/1\",\n" +
-                "        \"outputDataset\": \"http://dataset/2\"\n" +
-                "    }\n" +
-                "}\n";
-        return response;
-    }
+   public static String getProvenanceMessage(Context ctx, String status, OffsetDateTime startTime, OffsetDateTime endTime, List<Source> sourceData, List<String> output) throws Exception {
+        ProvenanceMessage m = new ProvenanceMessage();
+        Provenance p = new Provenance();
+        p.setContext(ctx);
+        
+        Agent a = new Agent();
+        a.setID("ontologyservice");
+        a.setRole("inference");
+        p.setAgent(a);
+        
+        Activity act = new Activity();
+        act.setTitle("Infer data");
+        act.setType("ServiceExecution");
+        act.setStatus(status);
+        act.setStartTime(DateTimeFormatter.ISO_OFFSET_DATE_TIME.format(startTime));
+        act.setEndTime(DateTimeFormatter.ISO_OFFSET_DATE_TIME.format(endTime));        
+        p.setActivity(act);
+                
+        Map<String, Object> payload = new HashMap<String, Object>();
+        p.setInput(new ArrayList<DataProperty>());
+        p.setOutput(new ArrayList<DataProperty>());
+        for(int i = 0; i < sourceData.size(); i++) {
+            Source s = sourceData.get(i);            
+            DataProperty dp = new DataProperty();
+            dp.setKey("inputDataset" + i);
+            dp.setRole("Dataset");       
+            p.getInput().add(dp);
+            
+            if("data".equalsIgnoreCase(s.getInputType())) {                 
+                payload.put("inputDataset" + i, "http://data.hulib.helsinki.fi/attx/temp/" + s.getInput().hashCode() + "_"+ System.currentTimeMillis());
+            }
+            else {
+                payload.put("inputDataset" + i, s.getInput());
+            }
+            
+        }
+        
+        for(int i = 0; i < output.size(); i++) {
+            String s = output.get(i);            
+            DataProperty dp = new DataProperty();
+            dp.setKey("outputDataset" + i);
+            dp.setRole("Dataset");
+            p.getOutput().add(dp);
+            payload.put("outputDataset" + i, s);
+        }
+        
+        m.setProvenance(p);        
+        m.setPayload(payload);
+        
+        
+        return mapper.writeValueAsString(m);
+    }   
 
     public void run() {
 
@@ -148,10 +183,11 @@ public class RPCServer {
                             .correlationId(properties.getCorrelationId())
                             .build();
 
-                    String response = "";
+                    String response = null;
                     String provMessage = "";
 
                     try {
+                        OffsetDateTime startTime = OffsetDateTime.now();
                         String message = new String(body,"UTF-8");
                         System.out.println("Message received: " + message);
 
@@ -161,23 +197,65 @@ public class RPCServer {
 
                         if (jsonNode.has("payload") && jsonNode.has("provenance")) {
                             JsonNode payload = jsonNode.get("payload").get("ontologyServiceInput");
-                            JsonNode provenance = jsonNode.get("provenance");
+                            
+                            JsonNode originalContext = jsonNode.get("provenance").get("context");
+                            Context ctx = new Context();
+                            ctx.setActivityID(originalContext.asText("activityID"));
+                            ctx.setWorkflowID(originalContext.asText("workflowID"));
+                            ctx.setStepID(originalContext.asText("stepID"));
 
                             String activityType = payload.get("activity").asText();
-
+                            String tempResponse = "";
                             if( activityType.equals("infer")) {
                                 System.out.println("Inference action received.");
-                                response = infer(payload);
+                                tempResponse = infer(payload);
+                                
+                                
                             } else if (activityType.equals("report")) {
                                 System.out.println("Validity report action received.");
-                                response = report(payload);
+                                tempResponse = report(payload);
+                                
                             } else {
-                                // Send ERROR
-
+                                // do nothing
                             }
+                            File outputDir = new File("/attx-sb-shared/ontologyservice/" + UUID.randomUUID());
+                            outputDir.mkdir();
+                            File outputFile = new File(outputDir, "/result.ttl");
+                            FileUtils.writeStringToFile(outputFile, tempResponse, "UTF-8");
+                            OffsetDateTime endTime = OffsetDateTime.now();
+                            
+                            List<Source> sourceData = new ArrayList<Source>();
+                            Source s1 = new Source();
+                            s1.setInput(payload.asText("schemaGraph"));
+                            s1.setContentType("turtle");
+                            s1.setInputType("configuration");
+                            Source s2 = new Source();                            
+                            s2.setInput(payload.asText("dataGraph"));
+                            s2.setContentType("turtle");
+                            s2.setInputType("graph");
+                            sourceData.add(s1);
+                            sourceData.add(s2);
+                            
+                            List<String> outputData = new ArrayList<String>();
+                            outputData.add(outputFile.toURI().toURL().toString());
+                            provMessage = RPCServer.getProvenanceMessage(ctx, "SUCCESS", startTime, endTime, sourceData, outputData);
+                            
+                            OntologyServiceResponseMessage responseMsg = new OntologyServiceResponseMessage();
+                            Provenance provObj = new Provenance();
+                            provObj.setContext(ctx);                            
+                            responseMsg.setProvenance(provObj);
+                            OntologyServiceOutput rout = new OntologyServiceOutput();
+                            rout.setContentType("turtle");
+                            rout.setOutput(outputFile.toURI().toURL().toString());
+                            rout.setOutputType("file");
+                            OntologyServiceResponseMessage.OntologyServiceResponseMessagePayload payload2 = responseMsg.new OntologyServiceResponseMessagePayload();                            
+                            responseMsg.setPayload(payload2);
+                            
+                            response = objectMapper.writeValueAsString(responseMsg);
+                            
                         }
                     }
-                    catch (RuntimeException e){
+                    catch (Exception e){
                         String message = new String(body,"UTF-8");
                         ObjectMapper objectMapper = new ObjectMapper();
                         JsonNode jsonNode = objectMapper.readTree(message);
