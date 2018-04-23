@@ -20,7 +20,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeoutException;
-import javax.sound.sampled.SourceDataLine;
 import org.apache.commons.io.FileUtils;
 import org.uh.hulib.attx.wc.uv.common.pojos.OntologyServiceOutput;
 import org.uh.hulib.attx.wc.uv.common.pojos.OntologyServiceResponseMessage;
@@ -65,89 +64,101 @@ public class RPCServer {
     private static String infer(JsonNode payload) {
 
         String result = null;
-        if (payload.has("sourceData")) {
-            // Load the main data model
+        try {
+            if (payload.has("sourceData")) {
+                // Load the main data model
 
-            String schemaGraph = payload.get("sourceData").get("schemaGraph").asText();
-            String dataGraph = payload.get("sourceData").get("dataGraph").asText();
+                String schemaGraph = payload.get("sourceData").get("schemaGraph").asText();
+                String dataGraph = payload.get("sourceData").get("dataGraph").asText();
 
-            result = OntologyUtils.OntologyInfer(dataGraph, schemaGraph);
-        } else {
-            // FOR NOW DO NOTHING
+                result = OntologyUtils.OntologyInfer(dataGraph, schemaGraph);
+
+
+            } else {
+                throw new Exception("Something went very wrong and could not do the inference. ");
+            }
+
+        } catch (Exception e) {
+            System.out.println("Something went very wrong and could not do the inference: " + e.toString());
+        } finally {
+            return result;
         }
-
-        return result;
     }
 
     private static String report(JsonNode payload) {
 
         String result = null;
-        if (payload.has("sourceData")) {
-            // Load the main data model
+        try {
+            if (payload.has("sourceData")) {
+                // Load the main data model
 
-            String schemaGraph = payload.get("sourceData").get("schemaGraph").asText();
-            String dataGraph = payload.get("sourceData").get("dataGraph").asText();
+                String schemaGraph = payload.get("sourceData").get("schemaGraph").asText();
+                String dataGraph = payload.get("sourceData").get("dataGraph").asText();
 
-            result = OntologyUtils.ValidityReport(dataGraph, schemaGraph);
-        } else {
-            // FOR NOW DO NOTHING
+                result = OntologyUtils.ValidityReport(dataGraph, schemaGraph);
+
+
+            } else {
+                throw new Exception("Something went very wrong and could not get the report. ");
+            }
+        } catch (Exception e) {
+            System.out.println("Something went very wrong and could not get the report: " + e.toString());
+        } finally {
+            return result;
         }
-
-        return result;
     }
 
    public static String getProvenanceMessage(Context ctx, String status, OffsetDateTime startTime, OffsetDateTime endTime, List<Source> sourceData, List<String> output) throws Exception {
         ProvenanceMessage m = new ProvenanceMessage();
         Provenance p = new Provenance();
         p.setContext(ctx);
-        
+
         Agent a = new Agent();
         a.setID("ontologyservice");
         a.setRole("inference");
         p.setAgent(a);
-        
+
         Activity act = new Activity();
         act.setTitle("Infer data");
         act.setType("ServiceExecution");
         act.setStatus(status);
         act.setStartTime(DateTimeFormatter.ISO_OFFSET_DATE_TIME.format(startTime));
-        act.setEndTime(DateTimeFormatter.ISO_OFFSET_DATE_TIME.format(endTime));        
+        act.setEndTime(DateTimeFormatter.ISO_OFFSET_DATE_TIME.format(endTime));
         p.setActivity(act);
-                
+
         Map<String, Object> payload = new HashMap<String, Object>();
         p.setInput(new ArrayList<DataProperty>());
         p.setOutput(new ArrayList<DataProperty>());
         for(int i = 0; i < sourceData.size(); i++) {
-            Source s = sourceData.get(i);            
+            Source s = sourceData.get(i);
             DataProperty dp = new DataProperty();
             dp.setKey("inputDataset" + i);
-            dp.setRole("Dataset");       
+            dp.setRole("Dataset");
             p.getInput().add(dp);
-            
-            if("data".equalsIgnoreCase(s.getInputType())) {                 
+
+            if("data".equalsIgnoreCase(s.getInputType())) {
                 payload.put("inputDataset" + i, "http://data.hulib.helsinki.fi/attx/temp/" + s.getInput().hashCode() + "_"+ System.currentTimeMillis());
             }
             else {
                 payload.put("inputDataset" + i, s.getInput());
             }
-            
+
         }
-        
+
         for(int i = 0; i < output.size(); i++) {
-            String s = output.get(i);            
+            String s = output.get(i);
             DataProperty dp = new DataProperty();
             dp.setKey("outputDataset" + i);
             dp.setRole("Dataset");
             p.getOutput().add(dp);
             payload.put("outputDataset" + i, s);
         }
-        
-        m.setProvenance(p);        
+
+        m.setProvenance(p);
         m.setPayload(payload);
-        
-        
+
         return mapper.writeValueAsString(m);
-    }   
+    }
 
     public void run() {
 
@@ -183,11 +194,14 @@ public class RPCServer {
                             .correlationId(properties.getCorrelationId())
                             .build();
 
-                    String response = null;
+                    String response = "";
                     String provMessage = "";
+                    Context ctx = new Context();
+                    OffsetDateTime startTime = OffsetDateTime.now();
+                    List<Source> sourceData = new ArrayList<Source>();
+                    List<String> outputData = new ArrayList<String>();
 
                     try {
-                        OffsetDateTime startTime = OffsetDateTime.now();
                         String message = new String(body,"UTF-8");
                         System.out.println("Message received: " + message);
 
@@ -197,83 +211,92 @@ public class RPCServer {
 
                         if (jsonNode.has("payload") && jsonNode.has("provenance")) {
                             JsonNode payload = jsonNode.get("payload").get("ontologyServiceInput");
-                            
+
                             JsonNode originalContext = jsonNode.get("provenance").get("context");
-                            Context ctx = new Context();
-                            ctx.setActivityID(originalContext.asText("activityID"));
-                            ctx.setWorkflowID(originalContext.asText("workflowID"));
-                            ctx.setStepID(originalContext.asText("stepID"));
+
+                            ctx.setActivityID(originalContext.get("activityID").asText());
+                            ctx.setWorkflowID(originalContext.get("workflowID").asText());
+                            ctx.setStepID(originalContext.get("stepID").asText());
 
                             String activityType = payload.get("activity").asText();
                             String tempResponse = "";
-                            if( activityType.equals("infer")) {
+
+                            if(activityType.equals("infer")) {
                                 System.out.println("Inference action received.");
-                                tempResponse = infer(payload);
-                                
-                                
+                                tempResponse = RPCServer.infer(payload);
+
+
                             } else if (activityType.equals("report")) {
                                 System.out.println("Validity report action received.");
-                                tempResponse = report(payload);
-                                
+                                tempResponse = RPCServer.report(payload);
+
                             } else {
-                                // do nothing
+                               throw new Exception("Something went very wrong. Missing key in message ?");
                             }
-                            File outputDir = new File("/attx-sb-shared/ontologyservice/" + UUID.randomUUID());
-                            outputDir.mkdir();
-                            File outputFile = new File(outputDir, "/result.ttl");
-                            FileUtils.writeStringToFile(outputFile, tempResponse, "UTF-8");
-                            OffsetDateTime endTime = OffsetDateTime.now();
-                            
-                            List<Source> sourceData = new ArrayList<Source>();
-                            Source s1 = new Source();
-                            s1.setInput(payload.asText("schemaGraph"));
-                            s1.setContentType("turtle");
-                            s1.setInputType("configuration");
-                            Source s2 = new Source();                            
-                            s2.setInput(payload.asText("dataGraph"));
-                            s2.setContentType("turtle");
-                            s2.setInputType("graph");
-                            sourceData.add(s1);
-                            sourceData.add(s2);
-                            
-                            List<String> outputData = new ArrayList<String>();
-                            outputData.add(outputFile.toURI().toURL().toString());
-                            provMessage = RPCServer.getProvenanceMessage(ctx, "SUCCESS", startTime, endTime, sourceData, outputData);
-                            
-                            OntologyServiceResponseMessage responseMsg = new OntologyServiceResponseMessage();
-                            Provenance provObj = new Provenance();
-                            provObj.setContext(ctx);                            
-                            responseMsg.setProvenance(provObj);
-                            OntologyServiceOutput rout = new OntologyServiceOutput();
-                            rout.setContentType("turtle");
-                            rout.setOutput(outputFile.toURI().toURL().toString());
-                            rout.setOutputType("file");
-                            OntologyServiceResponseMessage.OntologyServiceResponseMessagePayload payload2 = responseMsg.new OntologyServiceResponseMessagePayload();                            
-                            responseMsg.setPayload(payload2);
-                            
-                            response = objectMapper.writeValueAsString(responseMsg);
-                            
+                            if(tempResponse != null) {
+                                File outputDir = new File("/attx-sb-shared/ontologyservice/" + UUID.randomUUID());
+                                outputDir.mkdir();
+                                File outputFile = new File(outputDir, "/result.ttl");
+                                FileUtils.writeStringToFile(outputFile, tempResponse, "UTF-8");
+                                OffsetDateTime endTime = OffsetDateTime.now();
+                                String tempOutputFile = outputFile.toURI().toURL().toString();
+
+
+                                Source s1 = new Source();
+                                s1.setInput(payload.asText("schemaGraph"));
+                                s1.setContentType("turtle");
+                                s1.setInputType("configuration");
+                                Source s2 = new Source();
+                                s2.setInput(payload.asText("dataGraph"));
+                                s2.setContentType("turtle");
+                                s2.setInputType("graph");
+                                sourceData.add(s1);
+                                sourceData.add(s2);
+
+
+                                outputData.add(tempOutputFile);
+                                provMessage = RPCServer.getProvenanceMessage(ctx, "SUCCESS", startTime, endTime, sourceData, outputData);
+
+                                OntologyServiceResponseMessage responseMsg = new OntologyServiceResponseMessage();
+                                Provenance provObj = new Provenance();
+                                responseMsg.setProvenance(provObj);
+                                provObj.setContext(ctx);
+                                OntologyServiceOutput rout = new OntologyServiceOutput();
+                                rout.setContentType("turtle");
+                                rout.setOutput(tempOutputFile);
+                                rout.setOutputType("file");
+                                OntologyServiceResponseMessage.OntologyServiceResponseMessagePayload payload2 = responseMsg.new OntologyServiceResponseMessagePayload();
+                                responseMsg.setPayload(payload2);
+                                payload2.setStatus("SUCCESS");
+                                payload2.setStatusMessage("All is peachy.");
+                                payload2.setOntologyServiceOutput(rout);
+
+                                response = mapper.writeValueAsString(responseMsg);
+                            } else {
+                                throw new Exception("Something went very wrong. Value of the result is null");
+                            }
+
                         }
                     }
                     catch (Exception e){
-                        String message = new String(body,"UTF-8");
-                        ObjectMapper objectMapper = new ObjectMapper();
-                        JsonNode jsonNode = objectMapper.readTree(message);
 
-                        JsonNode context = jsonNode.get("provenance").get("context");
-                        response = "{\n"
-                                + "	\"provenance\": {\n"
-                                + "		\"context\": {\n"
-                                + "			\"workflowID\": \"" + context.get("workflowID").asText() + "\",\n"
-                                + "			\"activityID\": \"" + context.get("activityID").asText()+ "\",\n"
-                                + "			\"stepID\": \"" + context.get("stepID").asText()+ "\"\n"
-                                + "		}\n"
-                                + "	},"
-                                + "    \"payload\": {\n"
-                                + "        \"status\": \"error\",\n"
-                                + "        \"statusMessage\": \"" + e.toString() + "\"\n"
-                                + "   }\n"
-                                + "}";
+                        OntologyServiceResponseMessage responseMsg = new OntologyServiceResponseMessage();
+                        Provenance provObj = new Provenance();
+                        responseMsg.setProvenance(provObj);
+                        provObj.setContext(ctx);
+                        OntologyServiceResponseMessage.OntologyServiceResponseMessagePayload payload3 = responseMsg.new OntologyServiceResponseMessagePayload();
+                        responseMsg.setPayload(payload3);
+                        payload3.setStatus("ERROR");
+                        payload3.setStatusMessage(e.toString());
+
+                        response = mapper.writeValueAsString(responseMsg);
+                        OffsetDateTime endTime = OffsetDateTime.now();
+
+                        try {
+                            provMessage = RPCServer.getProvenanceMessage(ctx, "ERROR", startTime, endTime, sourceData, outputData);
+                        } catch (Exception e1) {
+                            e1.printStackTrace();
+                        }
 
                         System.out.println(" [.] " + e.toString());
                     }

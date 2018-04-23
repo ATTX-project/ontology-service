@@ -41,6 +41,7 @@ repositories {
     maven { url "$artifactRepoURL/repository/attx-releases"}
     maven { url "$artifactRepoURL/repository/internal"}
     mavenCentral()
+    mavenLocal()
 }
 
 dependencies {
