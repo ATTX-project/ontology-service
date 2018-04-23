@@ -243,11 +243,11 @@ public class RPCServer {
 
 
                                 Source s1 = new Source();
-                                s1.setInput(payload.asText("schemaGraph"));
+                                s1.setInput(payload.get("sourceData").get("schemaGraph").asText());
                                 s1.setContentType("turtle");
                                 s1.setInputType("configuration");
                                 Source s2 = new Source();
-                                s2.setInput(payload.asText("dataGraph"));
+                                s2.setInput(payload.get("sourceData").get("dataGraph").asText());
                                 s2.setContentType("turtle");
                                 s2.setInputType("graph");
                                 sourceData.add(s1);
