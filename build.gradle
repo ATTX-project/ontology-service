@@ -32,7 +32,7 @@ jar {
     baseName = 'ontology-service'
     group    = 'org.uh.hulib.attx.services'
     version  = '1.0-SNAPSHOT'
-    manifest { attributes "Main-Class": mainClassName }
+    manifest { attributes "Main-Class": mainClassName }    
 }
 
 sourceCompatibility = 1.8
@@ -47,7 +47,7 @@ repositories {
 dependencies {
     compile 'com.sparkjava:spark-core:2.3'
     compile 'org.apache.jena:jena-core:3.5.0'
-    compile 'com.rabbitmq:amqp-client:3.2.4'
+    compile 'com.rabbitmq:amqp-client:5.1.2'
     compile 'org.apache.jena:jena-arq:3.5.0'
     compile 'com.fasterxml.jackson.core:jackson-core:2.9.4'
     compile 'com.fasterxml.jackson.core:jackson-databind:2.9.4'
@@ -84,6 +84,7 @@ publishing {
      }
      publications {
          mavenJava(MavenPublication) {
+            artifact distTar
              groupId jar.group
              artifactId jar.baseName
              version jar.version
