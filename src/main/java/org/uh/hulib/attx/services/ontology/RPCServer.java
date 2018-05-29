@@ -271,7 +271,7 @@ public class RPCServer {
                                 responseMsg.setPayload(payload2);
                                 payload2.setStatus("SUCCESS");
                                 payload2.setStatusMessage("All is peachy.");
-                                payload2.setOntologyServiceOutput(rout);
+                                payload2.setOntologyServiceOutput(tempOutputFile);
 
                                 response = mapper.writeValueAsString(responseMsg);
                                 System.out.println(response);
