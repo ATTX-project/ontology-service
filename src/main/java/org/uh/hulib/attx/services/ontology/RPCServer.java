@@ -162,8 +162,8 @@ public class RPCServer {
 
     public void run() {
 
-        OntologyService webApi = new OntologyService();
-        webApi.run();
+        //OntologyService webApi = new OntologyService();
+        //webApi.run();
 
         ConnectionFactory factory = new ConnectionFactory();
         factory.setPassword(getPassword());
