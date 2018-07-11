@@ -1,5 +1,5 @@
 group 'org.uh.hulib.attx.services'
-version '1.0.0-SNAPSHOT'
+version '1.0-SNAPSHOT'
 
 apply plugin: 'java'
 apply plugin: 'maven'
@@ -31,8 +31,8 @@ compileJava {
 jar {
     baseName = 'ontology-service'
     group    = 'org.uh.hulib.attx.services'
-    version  = '1.0.0-SNAPSHOT'
-    manifest { attributes "Main-Class": mainClassName }
+    version  = '1.0-SNAPSHOT'
+    manifest { attributes "Main-Class": mainClassName }    
 }
 
 sourceCompatibility = 1.8
@@ -52,7 +52,7 @@ dependencies {
     compile 'com.fasterxml.jackson.core:jackson-core:2.9.4'
     compile 'com.fasterxml.jackson.core:jackson-databind:2.9.4'
     compile 'org.xerial:sqlite-jdbc:3.21.0'
-    compile 'org.uh.hulib.attx.wc.uv:uv-common:1.12-SNAPSHOT'
+    compile 'org.uh.hulib.attx.wc.uv:uv-common:1.16-SNAPSHOT'
     testCompile 'junit:junit:4.+'
     testCompile "org.mockito:mockito-core:2.+"
 }
@@ -84,6 +84,7 @@ publishing {
      }
      publications {
          mavenJava(MavenPublication) {
+            artifact distTar
              groupId jar.group
              artifactId jar.baseName
              version jar.version

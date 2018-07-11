@@ -233,14 +233,16 @@ public class RPCServer {
                             } else {
                                throw new Exception("Something went very wrong. Missing key in message ?");
                             }
+                            System.out.println(tempResponse);
                             if(tempResponse != null) {
                                 File outputDir = new File("/attx-sb-shared/ontologyservice/" + UUID.randomUUID());
                                 outputDir.mkdir();
+                                System.out.println("Created output dir");
                                 File outputFile = new File(outputDir, "/result.ttl");
                                 FileUtils.writeStringToFile(outputFile, tempResponse, "UTF-8");
                                 OffsetDateTime endTime = OffsetDateTime.now();
                                 String tempOutputFile = outputFile.toURI().toURL().toString();
-
+                                System.out.println(tempOutputFile);
 
                                 Source s1 = new Source();
                                 s1.setInput(payload.get("sourceData").get("schemaGraph").asText());
@@ -269,9 +271,10 @@ public class RPCServer {
                                 responseMsg.setPayload(payload2);
                                 payload2.setStatus("SUCCESS");
                                 payload2.setStatusMessage("All is peachy.");
-                                payload2.setOntologyServiceOutput(rout);
+                                payload2.setOntologyServiceOutput(tempOutputFile);
 
                                 response = mapper.writeValueAsString(responseMsg);
+                                System.out.println(response);
                             } else {
                                 throw new Exception("Something went very wrong. Value of the result is null");
                             }
